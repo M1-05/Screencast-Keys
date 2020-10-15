@@ -46,6 +46,9 @@ else:
     import bgl
 
 
+DEFAULT_FONT_SIZE = 11
+
+
 event_type_enum_items = bpy.types.Event.bl_rna.properties["type"].enum_items
 EventType = enum.IntEnum(
     "EventType",
@@ -501,6 +504,9 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
     # Current mouse coordinate.
     current_mouse_co = [0.0, 0.0]
 
+    # If this flag is True, draw handler will add new target regions to draw.
+    scan_new_target_regions = False
+
     @classmethod
     def is_running(cls):
         return cls.running
@@ -879,6 +885,7 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
             return      # No draw target.
 
         draw_area_min_x, draw_area_min_y, draw_area_max_x, draw_area_max_y = rect
+        print(draw_area_min_x)
         _, _, _, origin_x, origin_y = cls.get_origin(context)
         draw_area_width = draw_area_max_x - origin_x
         draw_area_height = draw_area_max_y - origin_y
@@ -1068,6 +1075,30 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
 
         if region_drawn:
             cls.draw_regions_prev.add(region.as_pointer())
+    
+        # Scan new region for drawing target.
+        if cls.scan_new_target_regions:
+            regions = cls.find_redraw_regions(context)
+
+            for area in context.screen.areas:
+                for region in area.regions:
+                    if region.as_pointer() in cls.draw_regions_prev:
+                        region.tag_redraw()
+                        cls.draw_regions_prev.remove(region.as_pointer())
+
+            for area, region in regions:
+                space_type = cls.SPACE_TYPES[area.type]
+                handler_key = (space_type, region.type)
+                if handler_key not in cls.handlers:
+                    cls.handlers[handler_key] = space_type.draw_handler_add(
+                        cls.draw_callback, (context, ), region.type,
+                        'POST_PIXEL')
+                cls.draw_regions_prev.add(region.as_pointer())
+            
+            cls.scan_new_target_regions = False
+
+        # Revert to original font size.
+        blf.size(font_id, DEFAULT_FONT_SIZE, dpi)
 
     @staticmethod
     @bpy.app.handlers.persistent
@@ -1195,8 +1226,9 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
 
     def modal(self, context, event):
         prefs = compat.get_user_preferences(context).addons[__package__].preferences
+        cls = self.__class__
 
-        if not self.__class__.is_running():
+        if not cls.is_running():
             return {'FINISHED'}
 
         if event.type == '':
@@ -1206,7 +1238,7 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
             return {'PASS_THROUGH'}
 
         if event.type == 'MOUSEMOVE':
-            self.__class__.current_mouse_co = [event.mouse_x, event.mouse_y]
+            cls.current_mouse_co = [event.mouse_x, event.mouse_y]
 
         event_type = EventType[event.type]
 
@@ -1215,11 +1247,11 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
         # Update Area - Space mapping.
         for area in context.screen.areas:
             for space in area.spaces:
-                self.area_spaces[area.as_pointer()].add(space.as_pointer())
+                cls.area_spaces[area.as_pointer()].add(space.as_pointer())
 
         # Update hold modifiers keys.
         self.update_hold_modifier_keys(event)
-        current_mod_keys = self.hold_modifier_keys.copy()
+        current_mod_keys = cls.hold_modifier_keys.copy()
         if event_type in current_mod_keys:
             # Remove modifier key which is just pressed.
             current_mod_keys.remove(event_type)
@@ -1231,7 +1263,7 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
         if (not self.is_ignore_event(event, prefs=prefs) and
                 not self.is_modifier_event(event) and
                 event.value == 'PRESS'):
-            last_event = self.event_history[-1] if self.event_history else None
+            last_event = cls.event_history[-1] if cls.event_history else None
             current_event = [current_time, event_type, current_mod_keys, 1]
 
 
@@ -1251,15 +1283,15 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
                 last_event[0] = current_time
                 last_event[-1] += 1
             else:
-                self.event_history.append(current_event)
-        self.event_history[:] = self.removed_old_event_history()
+                cls.event_history.append(current_event)
+        cls.event_history[:] = cls.removed_old_event_history()
 
         # Update operator history.
         operators = list(context.window_manager.operators)
         if operators:
             # Find last operator which detects in previous modal call.
-            if self.operator_history:
-                addr = self.operator_history[-1][-1]
+            if cls.operator_history:
+                addr = cls.operator_history[-1][-1]
             else:
                 addr = None
             prev_last_op_index = 0
@@ -1272,41 +1304,36 @@ class SK_OT_ScreencastKeys(bpy.types.Operator):
             for op in operators[prev_last_op_index:]:
                 op_prefix, op_name = op.bl_idname.split("_OT_")
                 idname_py = "{}.{}".format(op_prefix.lower(), op_name)
-                self.operator_history.append(
+                cls.operator_history.append(
                     [current_time, op.bl_label, idname_py, op.as_pointer()])
-        self.operator_history[:] = self.removed_old_operator_history()
+        cls.operator_history[:] = cls.removed_old_operator_history()
 
         # Redraw regions which we want.
-        prev_time = self.prev_time
+        prev_time = cls.prev_time
         if (not self.is_ignore_event(event, prefs=prefs) or
-                prev_time and current_time - prev_time >= self.TIMER_STEP):
-            regions = self.find_redraw_regions(context)
+                prev_time and current_time - prev_time >= cls.TIMER_STEP):
 
-            # If regions which are drawn at previous time, is not draw target
-            # at this time, we don't need to redraw anymore.
-            # But we raise redraw notification to make sure there are no
-            # updates on their regions.
-            # If there is update on the region, it will be added to
-            # self.draw_regions_prev in draw_callback function.
-            for area in context.screen.areas:
-                for region in area.regions:
-                    if region.as_pointer() in self.draw_regions_prev:
-                        region.tag_redraw()
-                        self.draw_regions_prev.remove(region.as_pointer())
+            # for area in context.screen.areas:
+            #     for region in area.regions:
+            #         if region.as_pointer() in cls.draw_regions_prev:
+            #             region.tag_redraw()
+            #             cls.draw_regions_prev.remove(region.as_pointer())
 
-            # Redraw all target regions.
-            # If there is no draw handler attached to the region, we add it to.
+            cls.scan_new_target_regions = True
+            cls.prev_time = current_time
+
+        # If there is no draw handler, add it.
+        if not cls.handlers:
+            regions = cls.find_redraw_regions(context)
             for area, region in regions:
-                space_type = self.SPACE_TYPES[area.type]
+                space_type = cls.SPACE_TYPES[area.type]
                 handler_key = (space_type, region.type)
-                if handler_key not in self.handlers:
-                    self.handlers[handler_key] = space_type.draw_handler_add(
-                        self.draw_callback, (context, ), region.type,
+                if handler_key not in cls.handlers:
+                    cls.handlers[handler_key] = space_type.draw_handler_add(
+                        cls.draw_callback, (context, ), region.type,
                         'POST_PIXEL')
                 region.tag_redraw()
-                self.draw_regions_prev.add(region.as_pointer())
-
-            self.__class__.prev_time = current_time
+                cls.draw_regions_prev.add(region.as_pointer())
 
         return {'PASS_THROUGH'}
 
