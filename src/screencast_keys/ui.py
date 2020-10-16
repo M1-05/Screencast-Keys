@@ -108,3 +108,67 @@ class SK_PT_ScreencastKeys(bpy.types.Panel):
     @classmethod
     def unregister(cls):
         del bpy.types.WindowManager.enable_screencast_keys
+
+
+@BlClassRegistry()
+class SK_PT_ScreencastKeys_Overlay(bpy.types.Panel):
+    bl_label = "Screencast Keys"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'HEADER'
+    bl_parent_id = "VIEW3D_PT_overlay"
+
+    def draw_header(self, context):
+        layout = self.layout
+        layout.prop(context.window_manager, "enable_screencast_keys", text="")
+
+    def draw(self, context):
+        layout = self.layout
+        view = context.space_data
+        overlay = view.overlay
+        display_all = overlay.show_overlays
+
+        prefs = compat.get_user_preferences(bpy.context).addons[__package__].preferences
+
+        column = layout.column()
+        column.active = display_all
+
+        column.prop(prefs, "color")
+        column.prop(prefs, "shadow")
+        if prefs.shadow:
+            column.prop(prefs, "shadow_color", text="")
+        column.prop(prefs, "background")
+        if prefs.background:
+            sp = compat.layout_split(column, factor=0.5)
+            sp.prop(prefs, "background_mode", text="")
+            sp = compat.layout_split(sp, factor=1.0)
+            sp.prop(prefs, "background_color", text="")
+        column.prop(prefs, "font_size")
+        if show_mouse_hold_status(prefs):
+            column.prop(prefs, "mouse_size")
+
+        column.separator()
+
+        column.prop(prefs, "origin")
+        column.operator("wm.sk_set_origin", text="Set Origin")
+        column.prop(prefs, "align")
+        row = column.row()
+        row.prop(prefs, "offset")
+        column.prop(prefs, "display_time")
+
+        column.separator()
+
+        column.prop(prefs, "max_event_history")
+        column.prop(prefs, "repeat_count")
+        column.prop(prefs, "show_mouse_events")
+        if prefs.show_mouse_events:
+            column.prop(prefs, "mouse_events_show_mode")
+        column.prop(prefs, "show_last_operator")
+        if prefs.show_last_operator:
+            column.prop(prefs, "last_operator_show_mode")
+
+        column.separator()
+
+        column.label(text="Experimental:")
+        col = column.column()
+        col.prop(prefs, "get_event_aggressively")
+        col.enabled = False if c_structures.NOT_SUPPORTED else True
