@@ -27,7 +27,6 @@ from .utils import compatibility as compat
 from .utils import c_structures
 
 
-@BlClassRegistry()
 class SK_PT_ScreencastKeys(bpy.types.Panel):
     bl_idname = "SK_PT_ScreencastKeys"
     bl_label = "Screencast Keys"
@@ -110,16 +109,11 @@ class SK_PT_ScreencastKeys(bpy.types.Panel):
         del bpy.types.WindowManager.enable_screencast_keys
 
 
-@BlClassRegistry()
 class SK_PT_ScreencastKeys_ViewportOverlay(bpy.types.Panel):
     bl_label = "Screencast Keys"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'HEADER'
-    bl_parent_id = "VIEW3D_PT_overlay"
-
-    def draw_header(self, context):
-        layout = self.layout
-        layout.prop(context.window_manager, "enable_screencast_keys", text="")
+    bl_idname = "SK_PT_ScreencastKeys_ViewportOverlay"
 
     def draw(self, context):
         layout = self.layout

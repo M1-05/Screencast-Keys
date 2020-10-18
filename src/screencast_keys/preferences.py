@@ -68,6 +68,20 @@ class SK_OT_UpdateAddon(bpy.types.Operator):
         return {'FINISHED'}
 
 
+def ui_in_viewport_overlay_menu_fn(self, context):
+    layout = self.layout
+    view = context.space_data
+    overlay = view.overlay
+    prefs = compat.get_user_preferences(context).addons[__package__].preferences
+
+    row = layout.row(align=True)
+    row.prop(context.window_manager, "enable_screencast_keys",
+            icon='LONGDISPLAY', text="")
+    sub = row.row(align=True)
+    sub.active = overlay.show_overlays
+    sub.popover(panel="SK_PT_ScreencastKeys_ViewportOverlay", text="")
+
+
 def get_update_candidate_branches(_, __):
     updater = AddonUpdaterManager.get_instance()
     if not updater.candidate_checked():
@@ -298,15 +312,16 @@ class SK_Preferences(bpy.types.AddonPreferences):
     )
 
     def ui_in_viewport_overlay_update_fn(self, context):
+        has_panel = hasattr(bpy.types, SK_PT_ScreencastKeys_ViewportOverlay.bl_idname)
+        if has_panel:
+            try:
+                bpy.types.VIEW3D_HT_header.remove(ui_in_viewport_overlay_menu_fn)
+                bpy.utils.unregister_class(SK_PT_ScreencastKeys_ViewportOverlay)
+            except:
+                pass
         if self.show_ui_in_viewport_overlay:
+            bpy.types.VIEW3D_HT_header.append(ui_in_viewport_overlay_menu_fn)
             bpy.utils.register_class(SK_PT_ScreencastKeys_ViewportOverlay)
-        else:
-            has_panel = hasattr(bpy.types, SK_PT_ScreencastKeys_ViewportOverlay.bl_idname)
-            if has_panel:
-                try:
-                    bpy.utils.unregister_class(SK_PT_ScreencastKeys_ViewportOverlay)
-                except:
-                    pass
 
     show_ui_in_viewport_overlay = bpy.props.BoolProperty(
         name="Viewport Overlay",
@@ -320,6 +335,7 @@ class SK_Preferences(bpy.types.AddonPreferences):
         name="Enable Display Event Text Aliases",
         description="Enable display event text aliases",
         default=False,
+        update=ui_in_viewport_overlay_update_fn,
     )
 
     display_event_text_aliases_props = bpy.props.CollectionProperty(
