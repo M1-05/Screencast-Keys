@@ -26,7 +26,7 @@ from bpy.props import (
 )
 
 from .ops import EventType, show_mouse_hold_status
-from .ui import SK_PT_ScreencastKeys, SK_PT_ScreencastKeys_ViewportOverlay
+from .ui import SK_PT_ScreencastKeys, SK_PT_ScreencastKeys_Header
 from .utils.addon_updater import AddonUpdaterManager
 from .utils.bl_class_registry import BlClassRegistry
 from .utils import compatibility as compat
@@ -68,7 +68,7 @@ class SK_OT_UpdateAddon(bpy.types.Operator):
         return {'FINISHED'}
 
 
-def ui_in_viewport_overlay_menu_fn(self, context):
+def ui_in_header_menu_fn(self, context):
     layout = self.layout
     view = context.space_data
     overlay = view.overlay
@@ -79,7 +79,7 @@ def ui_in_viewport_overlay_menu_fn(self, context):
             icon='LONGDISPLAY', text="")
     sub = row.row(align=True)
     sub.active = overlay.show_overlays
-    sub.popover(panel="SK_PT_ScreencastKeys_ViewportOverlay", text="")
+    sub.popover(panel="SK_PT_ScreencastKeys_Header", text="")
 
 
 def get_update_candidate_branches(_, __):
@@ -311,23 +311,23 @@ class SK_Preferences(bpy.types.AddonPreferences):
         update=ui_in_sidebar_update_fn,
     )
 
-    def ui_in_viewport_overlay_update_fn(self, context):
-        has_panel = hasattr(bpy.types, SK_PT_ScreencastKeys_ViewportOverlay.bl_idname)
+    def ui_in_header_update_fn(self, context):
+        has_panel = hasattr(bpy.types, SK_PT_ScreencastKeys_Header.bl_idname)
         if has_panel:
             try:
-                bpy.types.VIEW3D_HT_header.remove(ui_in_viewport_overlay_menu_fn)
-                bpy.utils.unregister_class(SK_PT_ScreencastKeys_ViewportOverlay)
+                bpy.types.VIEW3D_HT_header.remove(ui_in_header_menu_fn)
+                bpy.utils.unregister_class(SK_PT_ScreencastKeys_Header)
             except:
                 pass
-        if self.show_ui_in_viewport_overlay:
-            bpy.types.VIEW3D_HT_header.append(ui_in_viewport_overlay_menu_fn)
-            bpy.utils.register_class(SK_PT_ScreencastKeys_ViewportOverlay)
+        if self.show_ui_in_header:
+            bpy.types.VIEW3D_HT_header.append(ui_in_header_menu_fn)
+            bpy.utils.register_class(SK_PT_ScreencastKeys_Header)
 
-    show_ui_in_viewport_overlay = bpy.props.BoolProperty(
-        name="Viewport Overlay",
-        description="Show UI in Viewport Overlay",
+    show_ui_in_header = bpy.props.BoolProperty(
+        name="Header",
+        description="Show UI in Header",
         default=False,
-        update=ui_in_viewport_overlay_update_fn,
+        update=ui_in_header_update_fn,
     )
 
     # for display event text alias
@@ -335,7 +335,7 @@ class SK_Preferences(bpy.types.AddonPreferences):
         name="Enable Display Event Text Aliases",
         description="Enable display event text aliases",
         default=False,
-        update=ui_in_viewport_overlay_update_fn,
+        update=ui_in_header_update_fn,
     )
 
     display_event_text_aliases_props = bpy.props.CollectionProperty(
@@ -403,7 +403,7 @@ class SK_Preferences(bpy.types.AddonPreferences):
                     col.prop(self, "panel_space_type")
                     col.prop(self, "panel_category")
 
-                col.prop(self, "show_ui_in_viewport_overlay")
+                col.prop(self, "show_ui_in_header")
 
             layout.separator()
 

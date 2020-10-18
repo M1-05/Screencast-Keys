@@ -109,11 +109,11 @@ class SK_PT_ScreencastKeys(bpy.types.Panel):
         del bpy.types.WindowManager.enable_screencast_keys
 
 
-class SK_PT_ScreencastKeys_ViewportOverlay(bpy.types.Panel):
+class SK_PT_ScreencastKeys_Header(bpy.types.Panel):
     bl_label = "Screencast Keys"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'HEADER'
-    bl_idname = "SK_PT_ScreencastKeys_ViewportOverlay"
+    bl_idname = "SK_PT_ScreencastKeys_Header"
 
     def draw(self, context):
         layout = self.layout
