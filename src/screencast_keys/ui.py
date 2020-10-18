@@ -111,7 +111,7 @@ class SK_PT_ScreencastKeys(bpy.types.Panel):
 
 
 @BlClassRegistry()
-class SK_PT_ScreencastKeys_Overlay(bpy.types.Panel):
+class SK_PT_ScreencastKeys_ViewportOverlay(bpy.types.Panel):
     bl_label = "Screencast Keys"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'HEADER'

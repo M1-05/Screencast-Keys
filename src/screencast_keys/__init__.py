@@ -113,15 +113,17 @@ def register():
     register_shortcut_key()
     bpy.app.handlers.load_pre.append(load_pre_handler)
 
-    # Apply preferences of the panel location.
+    # Apply preferences of UI.
     context = bpy.context
     prefs = utils.compatibility.get_user_preferences(context).addons[__package__].preferences
     # Only default panel location is available in < 2.80
     if utils.compatibility.check_version(2, 80, 0) < 0:
         prefs.panel_space_type = 'VIEW_3D'
         prefs.panel_category = "Screencast Key"
-    preferences.SK_Preferences.panel_category_update_fn(prefs, context)
-    preferences.SK_Preferences.panel_space_type_update_fn(prefs, context)
+        prefs.show_ui_in_sidebar = True
+        prefs.show_ui_in_viewport_overlay = False
+    preferences.SK_Preferences.ui_in_sidebar_update_fn(prefs, context)
+    #preferences.SK_Preferences.show_ui_in_viewport_overlay_update_fn(prefs, context)
 
     for event in list(ops.EventType):
         item = prefs.display_event_text_aliases_props.add()
