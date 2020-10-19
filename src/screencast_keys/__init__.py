@@ -117,7 +117,7 @@ def register():
     # TODO: Register by BlClassRegistry
     bpy.utils.register_class(preferences.DisplayEventTextAliasProperties)
     bpy.utils.register_class(ui.SK_PT_ScreencastKeys)
-    bpy.utils.register_class(ui.SK_PT_ScreencastKeys_Header)
+    bpy.utils.register_class(ui.SK_PT_ScreencastKeys_Overlay)
     utils.bl_class_registry.BlClassRegistry.register()
     register_shortcut_key()
     bpy.app.handlers.load_pre.append(load_pre_handler)
@@ -130,9 +130,9 @@ def register():
         prefs.panel_space_type = 'VIEW_3D'
         prefs.panel_category = "Screencast Key"
         prefs.show_ui_in_sidebar = True
-        prefs.show_ui_in_header = False
+        prefs.show_ui_in_overlay = False
     preferences.SK_Preferences.ui_in_sidebar_update_fn(prefs, context)
-    preferences.SK_Preferences.ui_in_header_update_fn(prefs, context)
+    preferences.SK_Preferences.ui_in_overlay_update_fn(prefs, context)
 
     for event in list(ops.EventType):
         item = prefs.display_event_text_aliases_props.add()
@@ -141,12 +141,11 @@ def register():
 
 
 def unregister():
-    call_silently(bpy.types.VIEW3D_HT_header.remove, preferences.ui_in_header_menu_fn)
     bpy.app.handlers.load_pre.remove(load_pre_handler)
     unregister_shortcut_key()
     # TODO: Unregister by BlClassRegistry
     utils.bl_class_registry.BlClassRegistry.unregister()
-    call_silently(bpy.utils.unregister_class, ui.SK_PT_ScreencastKeys_Header)
+    call_silently(bpy.utils.unregister_class, ui.SK_PT_ScreencastKeys_Overlay)
     call_silently(bpy.utils.unregister_class, ui.SK_PT_ScreencastKeys)
     bpy.utils.unregister_class(preferences.DisplayEventTextAliasProperties)
 

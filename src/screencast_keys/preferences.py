@@ -26,7 +26,7 @@ from bpy.props import (
 )
 
 from .ops import EventType, show_mouse_hold_status
-from .ui import SK_PT_ScreencastKeys, SK_PT_ScreencastKeys_Header
+from .ui import SK_PT_ScreencastKeys, SK_PT_ScreencastKeys_Overlay
 from .utils.addon_updater import AddonUpdaterManager
 from .utils.bl_class_registry import BlClassRegistry
 from .utils import compatibility as compat
@@ -66,20 +66,6 @@ class SK_OT_UpdateAddon(bpy.types.Operator):
         updater.update(self.branch_name)
 
         return {'FINISHED'}
-
-
-def ui_in_header_menu_fn(self, context):
-    layout = self.layout
-    view = context.space_data
-    overlay = view.overlay
-    prefs = compat.get_user_preferences(context).addons[__package__].preferences
-
-    row = layout.row(align=True)
-    row.prop(context.window_manager, "enable_screencast_keys",
-            icon='LONGDISPLAY', text="")
-    sub = row.row(align=True)
-    sub.active = overlay.show_overlays
-    sub.popover(panel="SK_PT_ScreencastKeys_Header", text="")
 
 
 def get_update_candidate_branches(_, __):
@@ -311,23 +297,21 @@ class SK_Preferences(bpy.types.AddonPreferences):
         update=ui_in_sidebar_update_fn,
     )
 
-    def ui_in_header_update_fn(self, context):
-        has_panel = hasattr(bpy.types, SK_PT_ScreencastKeys_Header.bl_idname)
+    def ui_in_overlay_update_fn(self, context):
+        has_panel = hasattr(bpy.types, SK_PT_ScreencastKeys_Overlay.bl_idname)
         if has_panel:
             try:
-                bpy.types.VIEW3D_HT_header.remove(ui_in_header_menu_fn)
-                bpy.utils.unregister_class(SK_PT_ScreencastKeys_Header)
+                bpy.utils.unregister_class(SK_PT_ScreencastKeys_Overlay)
             except:
                 pass
-        if self.show_ui_in_header:
-            bpy.types.VIEW3D_HT_header.append(ui_in_header_menu_fn)
-            bpy.utils.register_class(SK_PT_ScreencastKeys_Header)
+        if self.show_ui_in_overlay:
+            bpy.utils.register_class(SK_PT_ScreencastKeys_Overlay)
 
-    show_ui_in_header = bpy.props.BoolProperty(
-        name="Header",
-        description="Show UI in Header",
+    show_ui_in_overlay = bpy.props.BoolProperty(
+        name="Overlay",
+        description="Show UI in Overlay",
         default=False,
-        update=ui_in_header_update_fn,
+        update=ui_in_overlay_update_fn,
     )
 
     # for display event text alias
@@ -335,7 +319,7 @@ class SK_Preferences(bpy.types.AddonPreferences):
         name="Enable Display Event Text Aliases",
         description="Enable display event text aliases",
         default=False,
-        update=ui_in_header_update_fn,
+        update=ui_in_overlay_update_fn,
     )
 
     display_event_text_aliases_props = bpy.props.CollectionProperty(
@@ -403,7 +387,7 @@ class SK_Preferences(bpy.types.AddonPreferences):
                     col.prop(self, "panel_space_type")
                     col.prop(self, "panel_category")
 
-                col.prop(self, "show_ui_in_header")
+                col.prop(self, "show_ui_in_overlay")
 
             layout.separator()
 
